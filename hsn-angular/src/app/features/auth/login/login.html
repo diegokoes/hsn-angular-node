@@ -1,1 +1,145 @@
-<p>login works!</p>
+<!-- <section class="container my-4 my-md-5 d-flex justify-content-center">
+        <div class="mx-auto hsn-login-panel">
+          <div class="row g-0">
+            <div class="col-12">
+              <div class="p-3 p-md-4 ">
+                <h2 class="hsn-login-title m-0">Acceso a mi cuenta HSN</h2>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <div class="p-3 p-md-4 ps-md-5">
+                <p class="mb-4 small fw-light">
+                  Si ya eres usuario registrado, introduce tu email y la contraseña que utilizaste en el registro
+                </p>
+
+                <form >
+                  <div class="mb-3">
+                    <label htmlFor="email" class="form-label fw-bold small">
+                      Correo electrónico
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      class="form-control hsn-square-input"
+                      placeholder="nombre@ejemplo.com"
+                      autoComplete="email"
+                      required
+                      onChange={handleOnChange}
+                      value={loginData.email.valor}
+                    />
+                    {loginData.email.valido === false && (
+                      <div class="form-text text-danger small">{loginData.email.mensajeValidacion}</div>
+                    )}
+                  </div>
+
+                  <div class="mb-3">
+                    <label htmlFor="password" class="form-label fw-bold small">
+                      Introduce tu contraseña
+                    </label>
+                    <div class="input-group hsn-input-group-square">
+                      <input
+                        id="password"
+                        class="form-control hsn-square-input"
+                        placeholder="••••••••"
+                        autoComplete="current-password"
+                        required
+                        value={loginData.password.valor}
+                      />
+                      <span
+                        class="px-2 d-flex align-items-center text-secondary hsn-password-toggle"
+                      >
+                        <i class="bi bi-eye visible"/>
+                      </span>
+                    </div>
+                    {loginData.password.valido === false && (
+                      <div class="form-text text-danger small">{loginData.password.mensajeValidacion}</div>
+                    )}
+                  </div>
+
+                  <div class="d-grid gap-2 mb-2">
+                    <button type="submit" class="btn hsn-btn-orange-outline fst-italic">
+                      Iniciar Sesión
+                    </button>
+                  </div>
+
+                  <div class="d-flex justify-content-between small">
+                    <a href="#" class="text-decoration-underline hsn-text-sm fw-bold small">
+                      ¿Olvidó su contraseña?
+                    </a>
+                    <span class="text-success small fw-semibold">
+                      <i class="bi bi-lock-fill text-success me-1 " />
+                      Conexión segura
+                    </span>
+                  </div>
+                  <p class="small text-muted mt-3">
+                    Este sitio está protegido por reCAPTCHA y se aplican la{" "}
+                    <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">
+                      Política de Privacidad
+                    </a>
+                    y los
+                    <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">
+                      Términos de Servicio
+                    </a>
+                    de Google.
+                  </p>
+                </form>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6  border-md-start border-md-top-0">
+              <div class="p-3 p-md-4 pe-md-5 hsn-right-col">
+                <div class="mb-3">
+                  <div class="h5 mb-2 fw-bolder small fst-italic">¿TODAVÍA NO TIENES CUENTA?</div>
+                  <p class="mb-3 small ">
+                    Acumula puntos, obtén descuentos exclusivos, recibe regalos sorpresa... todas estas ventajas y
+                    muchas más con la cuenta HSN
+                  </p>
+                </div>
+
+                <div class="d-grid gap-2 mb-4">
+                  <Link to="/auth/registro">
+                    <button type="button" class="btn hsn-btn-create fs-5">
+                      Crear una cuenta
+                    </button>
+                  </Link>
+                </div>
+
+                <div class="mb-2">
+                  <div class="fw-bold h6 mb-2 hsn-social-title small fst-italic">
+                    CREA O ACCEDE CON TUS REDES SOCIALES
+                  </div>
+                </div>
+
+                <div class="row g-2">
+                  <div class="col-6 col-md-12">
+                    <button type="button" class="btn w-100 hsn-btn-social">
+                      <i class="bi bi-google me-2 " />
+                      Continuar con Google
+                    </button>
+                  </div>
+                  <div class="col-6 col-md-12">
+                    <button type="button" class="btn w-100 hsn-btn-social">
+                      <i class="bi bi-facebook me-2" />
+                      Continuar con Facebook
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="text-center small text-muted px-3 px-md-4 pb-3 pb-md-4 ">
+                Si haces clic en Continuar con Facebook, Google o Amazon y no eres usuario de HSN, pasarás a estar
+                registrado y aceptas los
+                <span> </span>
+                <a href="#" class="text-decoration-underline hsn-text-sm">
+                  Términos y Condiciones y la Política de Privacidad
+                </a>
+                <span> </span>
+                de HSN.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section> -->
