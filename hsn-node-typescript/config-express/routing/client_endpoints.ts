@@ -1,6 +1,177 @@
-import express, { Router } from "express";
+import bcrypt from "bcrypt";
+import express, { Request, Response, Router } from "express";
+import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
+import { ClientType, RegistrationPayload } from "../../models/interfaces/client";
+import { sendAccountActivationMail } from "../../services/nodemailerService";
+
 const clientRouting: Router = express.Router();
-clientRouting.post("/auth/register", (req, res) => {
+const RECAPTCHA_MIN_SCORE = 0.5;
+
+// POST /auth/register
+clientRouting.post("/auth/register", async (req: Request, resp: Response) => {
   try {
-  } catch (error) {}
+    const { payload, tipo } = req.body as { payload: RegistrationPayload; tipo: ClientType };
+    if (!payload?.email || !payload?.password || (tipo !== "empresa" && tipo !== "particular")) {
+      return resp.status(400).send("Missing required registration data");
+    }
+
+    const collectionName = tipo === "empresa" ? "empresas" : "particulares";
+    await mongoose.connect(process.env.MONGODB_URL || "");
+    const collection = mongoose.connection.collection(collectionName);
+
+    const existing = await collection.findOne({ email: payload.email });
+    if (existing) {
+      return resp.status(200).send("EL EMAIL YA ESTA REGISTRADO EN LA BASE DE DATOS!!");
+    }
+
+    const hashedPassword = await bcrypt.hash(payload.password, 10);
+    const insertResult = await collection.insertOne({
+      ...payload,
+      password: hashedPassword,
+      accountActivated: false,
+      imageAvatar: "",
+      orders: [],
+      wishlist: [],
+      directions: [],
+      paymentMethods: [],
+      accountCreationDate: Date.now(),
+      tipo,
+    });
+
+    const JWT_ACTIVATION = jwt.sign(
+      { email: payload.email, idCliente: insertResult.insertedId.toString() },
+      process.env.JWT_SIGNING_KEY || "",
+      { expiresIn: "10min" }
+    );
+
+    const url_activate_account = `http://localhost:3000/auth/activar?email=${
+      payload.email
+    }&idCliente=${insertResult.insertedId.toString()}&token=${JWT_ACTIVATION}&tipo=${collectionName}`;
+    await sendAccountActivationMail(payload, url_activate_account);
+    return resp.status(201).json({ ok: true, idCliente: insertResult.insertedId });
+  } catch (error) {
+    console.error("**** ERROR EN REGISTRO", error);
+    return resp.status(500).send("ERROR EN SERVIDOR");
+  } finally {
+    if (mongoose.connection.readyState === 1) await mongoose.connection.close();
+  }
 });
+
+// GET /auth/activar
+clientRouting.get("/auth/activar", async (req: Request, resp: Response) => {
+  try {
+    const { email, idCliente, token, tipo } = req.query as Record<string, string>;
+    if (!email || !idCliente || !token || !tipo) {
+      return resp.status(400).send("Account activation URL missing params");
+    }
+
+    let payload: any;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SIGNING_KEY || "");
+    } catch (e) {
+      return resp.status(400).send("Invalid activation token");
+    }
+
+    if (email !== payload.email || idCliente !== payload.idCliente) {
+      return resp.status(400).send("Data mismatch between URL and token");
+    }
+
+    await mongoose.connect(process.env.MONGODB_URL || "");
+    const collection = mongoose.connection.collection(tipo);
+    const updateResult = await collection.updateOne(
+      { _id: new mongoose.Types.ObjectId(idCliente), email },
+      { $set: { accountActivated: true } }
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      return resp.status(404).send("Account activation failed, account not found");
+    }
+    return resp.status(200).redirect("http://localhost:5173/auth/activacion?operation=success");
+  } catch (err) {
+    console.error(`Error in account activation: ${err}`);
+    return resp.status(500).send("Error activating account");
+  } finally {
+    if (mongoose.connection.readyState === 1) await mongoose.connection.close();
+  }
+});
+
+// POST /auth/login
+clientRouting.post("/auth/login", async (req: Request, resp: Response) => {
+  const { email, password, recaptchaToken, recaptchaAction } = req.body as {
+    email: string;
+    password: string;
+    recaptchaToken?: string;
+    recaptchaAction?: string;
+  };
+
+  if (!email || !password) return resp.status(400).send("Bad Request, email and password needed");
+  if (
+    !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(email) ||
+    !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@.#$!%*?&])[A-Za-z\d@.#$!%*?&]{8,80}$/.test(password)
+  ) {
+    return resp.status(200).send("Bad format in email or password");
+  }
+
+  if (!recaptchaToken || !recaptchaAction) {
+    return resp.status(400).json({ message: "Captcha validation required" });
+  }
+
+  const captchaSecret = process.env.CAPTCHA_SECRET_KEY;
+  if (!captchaSecret) {
+    console.error("Missing CAPTCHA_SECRET_KEY environment variable");
+    return resp.status(500).json({ message: "Captcha verification unavailable" });
+  }
+
+  try {
+    const captchaResponse = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        secret: captchaSecret,
+        response: recaptchaToken,
+        remoteip: req.ip || "",
+      }),
+    });
+    const captchaData: any = await captchaResponse.json();
+    if (!captchaData.success) {
+      return resp.status(400).json({ message: "Captcha verification failed" });
+    }
+    const captchaScore =
+      typeof captchaData.score === "number" ? captchaData.score : parseFloat(captchaData.score ?? "0");
+    if ((recaptchaAction && captchaData.action !== recaptchaAction) || captchaScore < RECAPTCHA_MIN_SCORE) {
+      return resp.status(400).json({ message: "Captcha verification failed" });
+    }
+  } catch (captchaError) {
+    console.error("Error verifying reCAPTCHA:", captchaError);
+    return resp.status(500).json({ message: "Captcha verification failed" });
+  }
+
+  try {
+    await mongoose.connect(process.env.MONGODB_URL || "");
+    const empresasCollection = mongoose.connection.collection("empresas");
+    const particularesCollection = mongoose.connection.collection("particulares");
+    const [empresasUser, particularesUser] = await Promise.all([
+      empresasCollection.findOne({ email }),
+      particularesCollection.findOne({ email }),
+    ]);
+    const userData: any = particularesUser || empresasUser;
+    if (!userData) return resp.status(400).send("Bad Login");
+
+    const passwordsMatch = await bcrypt.compare(password, userData.password);
+    if (!passwordsMatch) return resp.status(400).json({ message: "Bad login" });
+    if (!userData.accountActivated) return resp.status(400).json({ message: "Your account is not activated" });
+
+    const sessionToken = jwt.sign({ email, idCliente: userData._id.toString() }, process.env.JWT_SIGNING_KEY || "", {
+      expiresIn: "2h",
+    });
+    return resp.status(200).json({ ok: true, userData, sessionToken });
+  } catch (err) {
+    console.error("Error with MongoDB ... ", err);
+    return resp.status(500).send("Error with MongoDB");
+  } finally {
+    if (mongoose.connection.readyState === 1) await mongoose.connection.close();
+  }
+});
+
+export default clientRouting;

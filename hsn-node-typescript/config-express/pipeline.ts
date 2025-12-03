@@ -1,8 +1,9 @@
+import cookieParser from "cookie-parser";
+import cors from "cors";
 import express, { Express } from "express";
-const cookieParser = require("cookie-parser");
-const cors = require("cors");
-const shopEndpoints = require("./routing/shopEndpoints.js");
-const clientEndpoints = require("./routing/clientEndpoints.js");
+import clientEndpoints from "./routing/clientEndpoints.js";
+import shopEndpoints from "./routing/shopEndpoints.js";
+
 
 export default function pipeline(app: Express = express()): void {
   // modulo para configurar el pipeline de middleware express
