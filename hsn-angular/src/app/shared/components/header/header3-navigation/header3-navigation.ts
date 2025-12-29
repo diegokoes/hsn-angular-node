@@ -6,6 +6,4 @@ import { Component } from '@angular/core';
   templateUrl: './header3-navigation.html',
   styleUrl: './header3-navigation.css',
 })
-export class Header3Navigation {
-
-}
+export class Header3Navigation {}
